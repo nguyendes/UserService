@@ -36,6 +36,11 @@ public class UserController {
         return userService.getUserById(userId);
     }
 
+    @GetMapping("/myinfo")
+    User getUserInfo(){
+        return userService.getUserInfo();
+    }
+
 
     @PostMapping
     ApiResponse<User> createUser(@RequestBody @Valid UserCreationRequest request) {

@@ -9,20 +9,20 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
+import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
 import org.springframework.security.web.SecurityFilterChain;
 
 import javax.crypto.spec.SecretKeySpec;
 
 @FieldDefaults(level = AccessLevel.PRIVATE)
 @Configuration
-@EnableWebSecurity
 @EnableMethodSecurity
 public class SecurityConfig {
     private final String[] PUBLIC_URLS = {"/users", "/auth/token", "/auth/introspect"};
@@ -37,15 +37,26 @@ public class SecurityConfig {
 
         http.authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.POST, PUBLIC_URLS).permitAll()// Cho phép truy cập không cần token
-//                        .requestMatchers(HttpMethod.GET,"/users").hasAuthority("SCOPE_ADMIN") phan quyen theo endpoint
+//                        .requestMatchers(HttpMethod.GET,"/users").hasAuthority("SCOPE_ADMIN") //phan quyen theo endpoint
                         .anyRequest().authenticated() // Yêu cầu xác thực với các yêu cầu khác
                 )
                 .oauth2ResourceServer(oauth2 -> oauth2
-                        .jwt(jwtConfigurer -> jwtConfigurer.decoder(jwtDecoder()))
+                        .jwt(jwtConfigurer -> jwtConfigurer.decoder(jwtDecoder())
+                                .jwtAuthenticationConverter(jwtConverter()))
                 )
                 .csrf(AbstractHttpConfigurer::disable); // Tắt CSRF
 
         return http.build();
+    }
+
+    @Bean
+    JwtAuthenticationConverter jwtConverter(){
+        JwtAuthenticationConverter converter = new JwtAuthenticationConverter();
+        JwtGrantedAuthoritiesConverter authoritiesConverter = new JwtGrantedAuthoritiesConverter();
+        authoritiesConverter.setAuthorityPrefix("ROLE_");
+        converter.setJwtGrantedAuthoritiesConverter(authoritiesConverter);
+
+     return converter;
     }
 
     @Bean

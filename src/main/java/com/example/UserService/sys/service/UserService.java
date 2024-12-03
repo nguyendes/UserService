@@ -7,14 +7,20 @@ import com.example.UserService.sys.domain.dto.request.UserCreationRequest;
 import com.example.UserService.sys.domain.dto.request.UserUpdateRequest;
 import com.example.UserService.sys.domain.entity.User;
 import com.example.UserService.sys.repo.UserRepository;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PostAuthorize;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 
+@Slf4j
 @Service
 public class UserService {
     @Autowired
@@ -57,14 +63,27 @@ public class UserService {
         return userRepository.save(user);
     }
 
+    public User getUserInfo() {
+        var context= SecurityContextHolder.getContext();
+        String username = context.getAuthentication().getName();
+        User user= userRepository.findByUsername(username).orElseThrow(
+                ()-> new AppException(ErrorCode.USER_NOT_EXISTS)
+        );
+        return user;
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
     public List<User> getAllUsers() {
+        log.info("getAllUsers");
         return userRepository.findAll();
     }
 
+    @PostAuthorize("hasRole('ADMIN')")
     public User getUserById(String id) {
+        log.info("by admin");
         return userRepository.findById(id).orElseThrow(()-> new RuntimeException("User not found"));
     }
-
+    @PreAuthorize("hasRole('ADMIN')")
     public User updateUserById(String id, UserUpdateRequest request) {
         User user = userRepository.findById(id).orElseThrow(()-> new RuntimeException("User not found"));
         user.setPassword(request.getPassword());
